@@ -1,40 +1,39 @@
 import PropTypes from 'prop-types';
-import React, { Component } from 'react';
+import React, { useEffect } from 'react';
 
 import { ModalStyled, OverlayStyled } from './Modal.styled';
 
-export class  Modal extends Component {
-  handleKeyDown = event => {
-    if (event.code === 'Escape') {
-      this.props.onCloseModal();
-    }
-  }
+export const  Modal = ({ onCloseModal, tags, largeImageURL}) => {
 
-  handelOverlayClick = event => {
+  const handelOverlayClick = event => {
     if (event.currentTarget === event.target) {
-      this.props.onCloseModal();
+      onCloseModal();
     }
   }
 
-  componentDidMount() {
-      window.addEventListener('keydown', this.handleKeyDown);
-  }
+  useEffect(() => {
+    const handleKeyDown = event => {
+      if (event.code === 'Escape') {
+        onCloseModal();
+      }
+    }
 
-  componentWillUnmount() {
-    window.removeEventListener('keydown', this.handleKeyDown);
-  }
+    window.addEventListener('keydown', handleKeyDown);
 
-  render() {
-    const { largeImageURL, tags } = this.props;
-    return (
-      <OverlayStyled onClick={this.handelOverlayClick}>
-        <ModalStyled>
-          <img src={largeImageURL}  alt={tags} />
-          {/*{JSON.stringify(this.props.visibleData, null, 2)}*/}
-        </ModalStyled>
-      </OverlayStyled>
-    )
-  }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    }
+
+  }, [onCloseModal])
+
+  return (
+    <OverlayStyled onClick={handelOverlayClick}>
+      <ModalStyled>
+        <img src={largeImageURL}  alt={tags} />
+      </ModalStyled>
+    </OverlayStyled>
+  )
+
 }
 
 Modal.propTypes = {

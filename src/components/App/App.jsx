@@ -1,5 +1,5 @@
-import React, { Component } from 'react';
-import Notiflix from 'notiflix';
+import React, { useEffect, useState } from 'react';
+import { Notify } from 'notiflix/build/notiflix-notify-aio';
 import {fetchImages} from '../../services'
 import {Searchbar} from '../Searchbar';
 import {ImageGallery} from '../ImageGallery';
@@ -7,74 +7,68 @@ import {ButtonLoadMore} from '../Button';
 import {Loader} from '../Loader';
 import {Container} from "./App.styled"
 
-export class App extends Component {
-  state = {
-    images: [],
-    searchValue: '',
-    totalImages: 0,
-    isLoading: false,
-    currentPage: 1,
-    total: 0,
-  };
+export const App = () => {
+  const [currentImages, setCurrentImages] = useState([]);
+  const [searchValue, setSearchValue]  = useState('');
+  const [totalPages, setTotalPages] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  // const [total, setTotal] = useState(0);
 
-  handleImagesFromApi = async() => {
+  const handleImagesFromApi = async(searchValue, currentPage) => {
     try {
-      this.setState({ isLoading: true });
-      const { searchValue, currentPage } = this.state;
+      setIsLoading( true );
       const { images, totalImages } = await fetchImages(searchValue, currentPage);
       if (images.length && currentPage === 1) {
-        Notiflix.Notify.success(`Hooray! We found ${totalImages} images.`);
+        Notify.success(`Hooray! We found ${totalImages} images.`);
       }
       if (images.length === 0) {
-        Notiflix.Notify.failure('There are no images found. Please, enter a valid value');
+        Notify.failure('There are no images found. Please, enter a valid value');
       }
-      if (this.state.images.length + images.length >= totalImages) {
-        Notiflix.Notify.info('We\'re sorry, but you\'ve reached the end of search results.');
+      if (currentImages.length + images.length >= totalImages) {
+        Notify.info('We\'re sorry, but you\'ve reached the end of search results.');
       }
-      this.setState(prevState => {
-        return {
-          images: [...prevState.images, ...images],
-          total: totalImages,
-        }
-      })
+
+      setCurrentImages(prevImages => [...prevImages, ...images]);
+      const totalPages = Math.ceil(totalImages / 12);
+      setTotalPages(totalPages);
     } catch(error) {
-      this.setState({ error: error.message })
+      console.log(error.message);
     } finally {
-      this.setState({ isLoading: false });
+      setIsLoading(false );
     }
   }
-  handleSubmit = searchValue => {
-    if (searchValue.trim() === '') {
-      return Notiflix.info('You wrote nothing')
-    } else if (this.state.searchValue !== searchValue) {
-      this.setState({images: [], currentPage: 1, searchValue})
-    }
-  }
-
-  handleLoadMore = () => {
-    this.setState(prevState => ({
-      currentPage: prevState.currentPage + 1,
-    }))
-  }
-
-  componentDidUpdate(prevProps, prevState, snapshot) {
-    const {searchValue, currentPage} = this.state;
-    if (prevState.searchValue !== searchValue ||
-      prevState.currentPage !== currentPage) {
-      this.handleImagesFromApi();
+  const handleSubmit = searchString => {
+    const searchStringTrimmed = searchString.trim();
+    if (searchStringTrimmed === '') {
+      return Notify.info('You wrote nothing')
+    } else if (searchStringTrimmed !== searchValue) {
+      setCurrentImages([]);
+      setCurrentPage(1);
+      setSearchValue(searchStringTrimmed);
     }
   }
 
-  render() {
-    const {images, total, currentPage, isLoading} = this.state;
-    const totalPage = Math.ceil(total / 12);
-    return (
-      <Container>
-        <Searchbar onSubmit={this.handleSubmit}/>
-        {images.length > 0 && <ImageGallery images={images} />}
-        {isLoading && <Loader />}
-        {images.length > 0 && totalPage > currentPage && <ButtonLoadMore doLoadMore={this.handleLoadMore} />}
-      </Container>
-    )
+  const handleLoadMore = () => {
+    setCurrentPage(currentPage + 1)
   }
+
+  useEffect(() => {
+    // if (searchValue === '') {
+    //   return;
+    // }
+    if (searchValue.trim() !== '') {
+      handleImagesFromApi(searchValue, currentPage);
+    }
+  }, [searchValue, currentPage]);
+
+  return (
+    <Container>
+      <Searchbar onSubmit={handleSubmit}/>
+      {currentImages.length > 0 && <ImageGallery images={currentImages} />}
+      {isLoading && <Loader />}
+      {currentImages.length > 0 && totalPages > currentPage && <ButtonLoadMore doLoadMore={handleLoadMore} />}
+    </Container>
+  )
+
 }
